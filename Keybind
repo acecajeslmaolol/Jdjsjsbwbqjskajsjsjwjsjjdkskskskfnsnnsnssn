@@ -1,0 +1,87 @@
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local UserInputService = game:GetService("UserInputService")
+local currentKey = Enum.KeyCode.C
+
+-- GUI setup
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.Name = "KeyClickerMiniUI"
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Main Frame (compact, no glow)
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 140, 0, 95)
+frame.Position = UDim2.new(0.5, -70, 0.5, -48)
+frame.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
+frame.BorderSizePixel = 0
+frame.Active = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+
+-- Press Key Button
+local keyBtn = Instance.new("TextButton", frame)
+keyBtn.Size = UDim2.new(1, -20, 0, 36)
+keyBtn.Position = UDim2.new(0, 10, 0, 10)
+keyBtn.Text = "Press: C"
+keyBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+keyBtn.TextColor3 = Color3.new(1, 1, 1)
+keyBtn.Font = Enum.Font.GothamBold
+keyBtn.TextSize = 17
+Instance.new("UICorner", keyBtn).CornerRadius = UDim.new(0, 8)
+
+-- Toggle Key Button
+local toggleBtn = Instance.new("TextButton", frame)
+toggleBtn.Size = UDim2.new(1, -20, 0, 28)
+toggleBtn.Position = UDim2.new(0, 10, 0, 52)
+toggleBtn.Text = "Switch to B"
+toggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+toggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+toggleBtn.Font = Enum.Font.Gotham
+toggleBtn.TextSize = 14
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
+
+-- Drag logic (Mobile + PC)
+local dragging, dragStart, startPos
+frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+		                           startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+-- Key press function
+local function pressKey()
+	VirtualInputManager:SendKeyEvent(true, currentKey, false, game)
+	task.wait(0.05)
+	VirtualInputManager:SendKeyEvent(false, currentKey, false, game)
+end
+
+if UserInputService.TouchEnabled then
+	keyBtn.TouchTap:Connect(pressKey)
+else
+	keyBtn.MouseButton1Click:Connect(pressKey)
+end
+
+-- Toggle key logic
+toggleBtn.MouseButton1Click:Connect(function()
+	if currentKey == Enum.KeyCode.C then
+		currentKey = Enum.KeyCode.B
+		keyBtn.Text = "Press: B"
+		toggleBtn.Text = "Switch to C"
+	else
+		currentKey = Enum.KeyCode.C
+		keyBtn.Text = "Press: C"
+		toggleBtn.Text = "Switch to B"
+	end
+end)
