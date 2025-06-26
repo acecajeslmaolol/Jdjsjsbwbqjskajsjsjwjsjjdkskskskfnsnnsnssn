@@ -34,16 +34,23 @@ local function createButton(parent, positionY, text, color, callback)
 	return btn
 end
 
--- Press Key
+-- Press Key C/B
 local keyBtn = createButton(frame, 10, "Press: C", Color3.fromRGB(0, 120, 255), function()
 	VirtualInputManager:SendKeyEvent(true, currentKey, false, game)
 	task.wait(0.05)
 	VirtualInputManager:SendKeyEvent(false, currentKey, false, game)
 end)
 
+-- Press V Key
+local vBtn = createButton(frame, 50, "Press: V", Color3.fromRGB(255, 120, 60), function()
+	VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.V, false, game)
+	task.wait(0.05)
+	VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.V, false, game)
+end)
+
 -- Toggle Key
 local toggleBtn
-toggleBtn = createButton(frame, 50, "Switch to B", Color3.fromRGB(45, 45, 55), function()
+toggleBtn = createButton(frame, 90, "Switch to B", Color3.fromRGB(45, 45, 55), function()
 	if currentKey == Enum.KeyCode.C then
 		currentKey = Enum.KeyCode.B
 		keyBtn.Text = "Press: B"
@@ -53,13 +60,6 @@ toggleBtn = createButton(frame, 50, "Switch to B", Color3.fromRGB(45, 45, 55), f
 		keyBtn.Text = "Press: C"
 		toggleBtn.Text = "Switch to B"
 	end
-end)
-
--- Press V Key
-local vBtn = createButton(frame, 90, "Press: V", Color3.fromRGB(255, 120, 60), function()
-	VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.V, false, game)
-	task.wait(0.05)
-	VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.V, false, game)
 end)
 
 -- Minimize
@@ -127,7 +127,7 @@ end)
 -- Touch Support
 if UserInputService.TouchEnabled then
 	keyBtn.TouchTap:Connect(function() keyBtn:Activate() end)
-	toggleBtn.TouchTap:Connect(function() toggleBtn:Activate() end)
 	vBtn.TouchTap:Connect(function() vBtn:Activate() end)
+	toggleBtn.TouchTap:Connect(function() toggleBtn:Activate() end)
 	minimizeBtn.TouchTap:Connect(function() minimizeBtn:Activate() end)
 end
