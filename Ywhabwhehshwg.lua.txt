@@ -11,8 +11,8 @@ gui.Name = "KeyClickerMiniUI"
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 150, 0, 130)
-frame.Position = getgenv().KeyClickerPosition or UDim2.new(0.5, -75, 0.5, -65)
+frame.Size = UDim2.new(0, 150, 0, 170)
+frame.Position = getgenv().KeyClickerPosition or UDim2.new(0.5, -75, 0.5, -85)
 frame.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
 frame.BorderSizePixel = 0
 frame.Active = true
@@ -55,8 +55,15 @@ toggleBtn = createButton(frame, 50, "Switch to B", Color3.fromRGB(45, 45, 55), f
 	end
 end)
 
--- Minimize Button
-local minimizeBtn = createButton(frame, 90, "-", Color3.fromRGB(60, 60, 60), function()
+-- Press V Key
+local vBtn = createButton(frame, 90, "Press: V", Color3.fromRGB(255, 120, 60), function()
+	VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.V, false, game)
+	task.wait(0.05)
+	VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.V, false, game)
+end)
+
+-- Minimize
+local minimizeBtn = createButton(frame, 130, "-", Color3.fromRGB(60, 60, 60), function()
 	frame.Visible = false
 	local restoreBtn = Instance.new("TextButton", gui)
 	restoreBtn.Size = UDim2.new(0, 50, 0, 50)
@@ -113,7 +120,7 @@ UserInputService.InputChanged:Connect(function(input)
 		local delta = input.Position - dragStart
 		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
 		                           startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-		getgenv().KeyClickerPosition = frame.Position -- Save position
+		getgenv().KeyClickerPosition = frame.Position
 	end
 end)
 
@@ -121,5 +128,6 @@ end)
 if UserInputService.TouchEnabled then
 	keyBtn.TouchTap:Connect(function() keyBtn:Activate() end)
 	toggleBtn.TouchTap:Connect(function() toggleBtn:Activate() end)
+	vBtn.TouchTap:Connect(function() vBtn:Activate() end)
 	minimizeBtn.TouchTap:Connect(function() minimizeBtn:Activate() end)
 end
