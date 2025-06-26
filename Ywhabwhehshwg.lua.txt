@@ -1,21 +1,125 @@
--- Services local VirtualInputManager = game:GetService("VirtualInputManager") local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local UserInputService = game:GetService("UserInputService")
+local currentKey = Enum.KeyCode.C
 
--- Variables local currentKey = Enum.KeyCode.C
+-- Save last position
+getgenv().KeyClickerPosition = getgenv().KeyClickerPosition or nil
 
--- UI Setup local gui = Instance.new("ScreenGui", game.CoreGui) gui.Name = "KeyClickerMiniUI" gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+-- GUI Setup
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.Name = "KeyClickerMiniUI"
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local frame = Instance.new("Frame", gui) frame.Size = UDim2.new(0, 150, 0, 135) frame.Position = UDim2.new(0.5, -75, 0.5, -67) frame.BackgroundColor3 = Color3.fromRGB(28, 28, 35) frame.BorderSizePixel = 0 frame.Active = true Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 150, 0, 130)
+frame.Position = getgenv().KeyClickerPosition or UDim2.new(0.5, -75, 0.5, -65)
+frame.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
+frame.BorderSizePixel = 0
+frame.Active = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
 
-local function createButton(parent, positionY, text, color, clickFunc) local btn = Instance.new("TextButton", parent) btn.Size = UDim2.new(1, -20, 0, 30) btn.Position = UDim2.new(0, 10, 0, positionY) btn.Text = text btn.BackgroundColor3 = color btn.TextColor3 = Color3.new(1, 1, 1) btn.Font = Enum.Font.Gotham btn.TextSize = 16 btn.AutoButtonColor = true Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6) btn.MouseButton1Click:Connect(clickFunc) return btn end
+-- Button Creator
+local function createButton(parent, positionY, text, color, callback)
+	local btn = Instance.new("TextButton", parent)
+	btn.Size = UDim2.new(1, -20, 0, 32)
+	btn.Position = UDim2.new(0, 10, 0, positionY)
+	btn.Text = text
+	btn.BackgroundColor3 = color
+	btn.TextColor3 = Color3.new(1, 1, 1)
+	btn.Font = Enum.Font.Gotham
+	btn.TextSize = 16
+	btn.AutoButtonColor = true
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+	btn.MouseButton1Click:Connect(callback)
+	return btn
+end
 
-local keyBtn = createButton(frame, 10, "Press: C", Color3.fromRGB(0, 120, 255), function() VirtualInputManager:SendKeyEvent(true, currentKey, false, game) task.wait(0.05) VirtualInputManager:SendKeyEvent(false, currentKey, false, game) end)
+-- Press Key
+local keyBtn = createButton(frame, 10, "Press: C", Color3.fromRGB(0, 120, 255), function()
+	VirtualInputManager:SendKeyEvent(true, currentKey, false, game)
+	task.wait(0.05)
+	VirtualInputManager:SendKeyEvent(false, currentKey, false, game)
+end)
 
-local toggleBtn = createButton(frame, 45, "Switch to B", Color3.fromRGB(45, 45, 55), function() if currentKey == Enum.KeyCode.C then currentKey = Enum.KeyCode.B keyBtn.Text = "Press: B" toggleBtn.Text = "Switch to C" else currentKey = Enum.KeyCode.C keyBtn.Text = "Press: C" toggleBtn.Text = "Switch to B" end end)
+-- Toggle Key
+local toggleBtn
+toggleBtn = createButton(frame, 50, "Switch to B", Color3.fromRGB(45, 45, 55), function()
+	if currentKey == Enum.KeyCode.C then
+		currentKey = Enum.KeyCode.B
+		keyBtn.Text = "Press: B"
+		toggleBtn.Text = "Switch to C"
+	else
+		currentKey = Enum.KeyCode.C
+		keyBtn.Text = "Press: C"
+		toggleBtn.Text = "Switch to B"
+	end
+end)
 
-local spaceBtn = createButton(frame, 80, "Press: Space", Color3.fromRGB(100, 100, 255), function() VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game) task.wait(0.05) VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game) end)
+-- Minimize Button
+local minimizeBtn = createButton(frame, 90, "-", Color3.fromRGB(60, 60, 60), function()
+	frame.Visible = false
+	local restoreBtn = Instance.new("TextButton", gui)
+	restoreBtn.Size = UDim2.new(0, 50, 0, 50)
+	restoreBtn.Position = frame.Position
+	restoreBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	restoreBtn.Text = "+"
+	restoreBtn.Font = Enum.Font.Gotham
+	restoreBtn.TextColor3 = Color3.new(1, 1, 1)
+	restoreBtn.TextSize = 20
+	restoreBtn.Name = "RestoreButton"
+	restoreBtn.Active = true
+	Instance.new("UICorner", restoreBtn).CornerRadius = UDim.new(1, 0)
 
-local minimizeBtn = createButton(frame, 115, "-", Color3.fromRGB(60, 60, 60), function() frame.Visible = false local restoreBtn = Instance.new("TextButton", gui) restoreBtn.Size = UDim2.new(0, 60, 0, 30) restoreBtn.Position = UDim2.new(0.5, -30, 0.5, -15) restoreBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80) restoreBtn.Text = "Open" restoreBtn.Font = Enum.Font.Gotham restoreBtn.TextColor3 = Color3.new(1, 1, 1) restoreBtn.TextSize = 14 Instance.new("UICorner", restoreBtn).CornerRadius = UDim.new(0, 6) restoreBtn.MouseButton1Click:Connect(function() frame.Visible = true restoreBtn:Destroy() end) end)
+	restoreBtn.MouseButton1Click:Connect(function()
+		frame.Visible = true
+		restoreBtn:Destroy()
+	end)
 
--- Dragging support local dragging, dragStart, startPos frame.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true dragStart = input.Position startPos = frame.Position input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end) end end) UserInputService.InputChanged:Connect(function(input) if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then local delta = input.Position - dragStart frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y) end end)
+	-- Drag restore button
+	local draggingRestore, dragStartRestore, startPosRestore
+	restoreBtn.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			draggingRestore = true
+			dragStartRestore = input.Position
+			startPosRestore = restoreBtn.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then draggingRestore = false end
+			end)
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if draggingRestore and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			local delta = input.Position - dragStartRestore
+			restoreBtn.Position = UDim2.new(startPosRestore.X.Scale, startPosRestore.X.Offset + delta.X,
+			                                startPosRestore.Y.Scale, startPosRestore.Y.Offset + delta.Y)
+		end
+	end)
+end)
 
--- Touch support if UserInputService.TouchEnabled then keyBtn.TouchTap:Connect(keyBtn.MouseButton1Click) toggleBtn.TouchTap:Connect(toggleBtn.MouseButton1Click) spaceBtn.TouchTap:Connect(spaceBtn.MouseButton1Click) minimizeBtn.TouchTap:Connect(minimizeBtn.MouseButton1Click) end
+-- Drag main frame
+local dragging, dragStart, startPos
+frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then dragging = false end
+		end)
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+		                           startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		getgenv().KeyClickerPosition = frame.Position -- Save position
+	end
+end)
+
+-- Touch Support
+if UserInputService.TouchEnabled then
+	keyBtn.TouchTap:Connect(function() keyBtn:Activate() end)
+	toggleBtn.TouchTap:Connect(function() toggleBtn:Activate() end)
+	minimizeBtn.TouchTap:Connect(function() minimizeBtn:Activate() end)
+end
