@@ -1,0 +1,147 @@
+-- Services
+local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+-- Save/load helpers
+local function saveUDim2(udim)
+	return string.format("%s,%d,%s,%d", udim.X.Scale, udim.X.Offset, udim.Y.Scale, udim.Y.Offset)
+end
+
+local function loadUDim2(str)
+	local xS, xO, yS, yO = string.match(str or "", "([%d%.%-]+),([%d%.%-]+),([%d%.%-]+),([%d%.%-]+)")
+	if xS and xO and yS and yO then
+		return UDim2.new(tonumber(xS), tonumber(xO), tonumber(yS), tonumber(yO))
+	end
+	return UDim2.new(0.5, -100, 0.5, -130)
+end
+
+-- Position memory
+getgenv().KeyClickerData = getgenv().KeyClickerData or {
+	position = "0.5,-100,0.5,-130"
+}
+
+local isMobile = UserInputService.TouchEnabled
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.Name = "KeyUI"
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Frame
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 160, 0, 210)
+frame.Position = loadUDim2(getgenv().KeyClickerData.position)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+frame.BorderSizePixel = 0
+frame.Active = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+
+-- Title
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, -30, 0, 28)
+title.Position = UDim2.new(0, 10, 0, 0)
+title.Text = "🔘 Key Toggler"
+title.Font = Enum.Font.GothamBold
+title.TextColor3 = Color3.new(1, 1, 1)
+title.BackgroundTransparency = 1
+title.TextSize = 14
+
+-- Minimize
+local minimizeBtn = Instance.new("TextButton", frame)
+minimizeBtn.Size = UDim2.new(0, 26, 0, 26)
+minimizeBtn.Position = UDim2.new(1, -28, 0, 2)
+minimizeBtn.Text = "-"
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+minimizeBtn.TextColor3 = Color3.new(1, 1, 1)
+minimizeBtn.Font = Enum.Font.Gotham
+minimizeBtn.TextSize = 16
+Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(1, 0)
+
+-- Dragging
+local dragging, dragStart, startPos
+frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then dragging = false end
+		end)
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		getgenv().KeyClickerData.position = saveUDim2(frame.Position)
+	end
+end)
+
+-- Flash function
+local function flash(btn)
+	local orig = btn.BackgroundColor3
+	btn.BackgroundColor3 = Color3.new(1, 1, 1)
+	task.wait(0.05)
+	btn.BackgroundColor3 = orig
+end
+
+-- Q Button
+local qBtn = Instance.new("TextButton", frame)
+qBtn.Size = UDim2.new(1, -20, 0, 38)
+qBtn.Position = UDim2.new(0, 10, 0, 40)
+qBtn.Text = "Press: Q"
+qBtn.BackgroundColor3 = Color3.fromRGB(90, 120, 255)
+qBtn.TextColor3 = Color3.new(1,1,1)
+qBtn.Font = Enum.Font.Gotham
+qBtn.TextSize = 14
+Instance.new("UICorner", qBtn).CornerRadius = UDim.new(0, 6)
+
+qBtn.MouseButton1Click:Connect(function()
+	flash(qBtn)
+	VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+	task.wait(0.05)
+	VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+end)
+
+-- Toggle R Button
+local isRDown = false
+local rBtn = Instance.new("TextButton", frame)
+rBtn.Size = UDim2.new(1, -20, 0, 38)
+rBtn.Position = UDim2.new(0, 10, 0, 90)
+rBtn.Text = "Toggle R: OFF"
+rBtn.BackgroundColor3 = Color3.fromRGB(100, 180, 100)
+rBtn.TextColor3 = Color3.new(1, 1, 1)
+rBtn.Font = Enum.Font.Gotham
+rBtn.TextSize = 14
+Instance.new("UICorner", rBtn).CornerRadius = UDim.new(0, 6)
+
+rBtn.MouseButton1Click:Connect(function()
+	isRDown = not isRDown
+	if isRDown then
+		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.R, false, game)
+		rBtn.Text = "Toggle R: ON"
+		rBtn.BackgroundColor3 = Color3.fromRGB(180, 100, 100)
+	else
+		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.R, false, game)
+		rBtn.Text = "Toggle R: OFF"
+		rBtn.BackgroundColor3 = Color3.fromRGB(100, 180, 100)
+	end
+end)
+
+-- Minimize behavior
+minimizeBtn.MouseButton1Click:Connect(function()
+	frame.Visible = false
+	local restoreBtn = Instance.new("TextButton", gui)
+	restoreBtn.Size = UDim2.new(0, 40, 0, 40)
+	restoreBtn.Position = UDim2.new(0, 20, 0, 20)
+	restoreBtn.Text = "+"
+	restoreBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	restoreBtn.TextColor3 = Color3.new(1, 1, 1)
+	restoreBtn.Font = Enum.Font.Gotham
+	restoreBtn.TextSize = 20
+	Instance.new("UICorner", restoreBtn).CornerRadius = UDim.new(1, 0)
+	restoreBtn.Draggable = true
+	restoreBtn.MouseButton1Click:Connect(function()
+		frame.Visible = true
+		restoreBtn:Destroy()
+	end)
+end)
