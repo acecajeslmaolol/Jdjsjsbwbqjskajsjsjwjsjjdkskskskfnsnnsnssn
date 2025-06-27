@@ -1,109 +1,118 @@
-local VirtualInputManager = game:GetService("VirtualInputManager")
+-- Services
 local UserInputService = game:GetService("UserInputService")
-local currentKey = Enum.KeyCode.C
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
--- Save last position
-getgenv().KeyClickerPosition = getgenv().KeyClickerPosition or nil
+-- Save/load helpers
+local function saveUDim2(udim)
+	return string.format("%s,%d,%s,%d", udim.X.Scale, udim.X.Offset, udim.Y.Scale, udim.Y.Offset)
+end
 
--- GUI Setup
+local function loadUDim2(str)
+	local xS, xO, yS, yO = string.match(str or "", "([%d%.%-]+),([%d%.%-]+),([%d%.%-]+),([%d%.%-]+)")
+	if xS and xO and yS and yO then
+		return UDim2.new(tonumber(xS), tonumber(xO), tonumber(yS), tonumber(yO))
+	end
+	return UDim2.new(0.5, -100, 0.5, -130)
+end
+
+-- Config storage
+getgenv().KeyClickerData = getgenv().KeyClickerData or {
+	position = "0.5,-100,0.5,-130",
+	keybinds = {
+		C = Enum.KeyCode.C,
+		V = Enum.KeyCode.V,
+		B = Enum.KeyCode.B
+	}
+}
+local currentKeybinds = getgenv().KeyClickerData.keybinds
+
+-- GUI setup
 local gui = Instance.new("ScreenGui", game.CoreGui)
-gui.Name = "KeyClickerMiniUI"
+gui.Name = "KeyClickerUI"
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
+-- Main frame
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 150, 0, 170)
-frame.Position = getgenv().KeyClickerPosition or UDim2.new(0.5, -75, 0.5, -85)
-frame.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
-frame.BorderSizePixel = 0
+frame.Size = UDim2.new(0, 180, 0, 240)
+frame.Position = loadUDim2(getgenv().KeyClickerData.position)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 frame.Active = true
+frame.BorderSizePixel = 0
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
 
--- Button Creator
-local function createButton(parent, positionY, text, color, callback)
-	local btn = Instance.new("TextButton", parent)
-	btn.Size = UDim2.new(1, -20, 0, 32)
-	btn.Position = UDim2.new(0, 10, 0, positionY)
-	btn.Text = text
-	btn.BackgroundColor3 = color
+local function flash(button)
+	local original = button.BackgroundColor3
+	button.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	task.wait(0.05)
+	button.BackgroundColor3 = original
+end
+
+-- Make a key button
+local function makeKeyButton(label, key, posY)
+	local btn = Instance.new("TextButton", frame)
+	btn.Size = UDim2.new(1, -20, 0, 36)
+	btn.Position = UDim2.new(0, 10, 0, posY)
+	btn.Text = "Press: " .. key.Name
+	btn.BackgroundColor3 = Color3.fromRGB(80, 120, 255)
 	btn.TextColor3 = Color3.new(1, 1, 1)
 	btn.Font = Enum.Font.Gotham
-	btn.TextSize = 16
-	btn.AutoButtonColor = true
+	btn.TextSize = 14
 	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-	btn.MouseButton1Click:Connect(callback)
+
+	btn.MouseButton1Click:Connect(function()
+		flash(btn)
+		local bound = currentKeybinds[label]
+		VirtualInputManager:SendKeyEvent(true, bound, false, game)
+		task.wait(0.05)
+		VirtualInputManager:SendKeyEvent(false, bound, false, game)
+	end)
 	return btn
 end
 
--- Press Key C/B
-local keyBtn = createButton(frame, 10, "Press: C", Color3.fromRGB(0, 120, 255), function()
-	VirtualInputManager:SendKeyEvent(true, currentKey, false, game)
-	task.wait(0.05)
-	VirtualInputManager:SendKeyEvent(false, currentKey, false, game)
-end)
+local cBtn = makeKeyButton("C", currentKeybinds.C, 40)
+local vBtn = makeKeyButton("V", currentKeybinds.V, 80)
+local bBtn = makeKeyButton("B", currentKeybinds.B, 120)
 
--- Press V Key
-local vBtn = createButton(frame, 50, "Press: V", Color3.fromRGB(255, 120, 60), function()
-	VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.V, false, game)
-	task.wait(0.05)
-	VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.V, false, game)
-end)
+-- Title
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, -30, 0, 30)
+title.Position = UDim2.new(0, 10, 0, 5)
+title.Text = "🔧 Key Clicker"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.BackgroundTransparency = 1
+title.Font = Enum.Font.GothamBold
+title.TextSize = 15
 
--- Toggle Key
-local toggleBtn
-toggleBtn = createButton(frame, 90, "Switch to B", Color3.fromRGB(45, 45, 55), function()
-	if currentKey == Enum.KeyCode.C then
-		currentKey = Enum.KeyCode.B
-		keyBtn.Text = "Press: B"
-		toggleBtn.Text = "Switch to C"
-	else
-		currentKey = Enum.KeyCode.C
-		keyBtn.Text = "Press: C"
-		toggleBtn.Text = "Switch to B"
-	end
-end)
+-- Minimize button
+local minimizeBtn = Instance.new("TextButton", frame)
+minimizeBtn.Size = UDim2.new(0, 26, 0, 26)
+minimizeBtn.Position = UDim2.new(1, -30, 0, 6)
+minimizeBtn.Text = "-"
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+minimizeBtn.TextColor3 = Color3.new(1, 1, 1)
+minimizeBtn.Font = Enum.Font.Gotham
+minimizeBtn.TextSize = 16
+Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(1, 0)
 
--- Minimize
-local minimizeBtn = createButton(frame, 130, "-", Color3.fromRGB(60, 60, 60), function()
+minimizeBtn.MouseButton1Click:Connect(function()
 	frame.Visible = false
-	local restoreBtn = Instance.new("TextButton", gui)
-	restoreBtn.Size = UDim2.new(0, 50, 0, 50)
-	restoreBtn.Position = frame.Position
-	restoreBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-	restoreBtn.Text = "+"
-	restoreBtn.Font = Enum.Font.Gotham
-	restoreBtn.TextColor3 = Color3.new(1, 1, 1)
-	restoreBtn.TextSize = 20
-	restoreBtn.Name = "RestoreButton"
-	restoreBtn.Active = true
-	Instance.new("UICorner", restoreBtn).CornerRadius = UDim.new(1, 0)
-
-	restoreBtn.MouseButton1Click:Connect(function()
+	local restore = Instance.new("TextButton", gui)
+	restore.Size = UDim2.new(0, 40, 0, 40)
+	restore.Position = UDim2.new(0, 20, 0, 20)
+	restore.Text = "+"
+	restore.BackgroundColor3 = Color3.fromRGB(90, 90, 100)
+	restore.TextColor3 = Color3.new(1, 1, 1)
+	restore.Font = Enum.Font.Gotham
+	restore.TextSize = 20
+	Instance.new("UICorner", restore).CornerRadius = UDim.new(1, 0)
+	restore.Draggable = true
+	restore.MouseButton1Click:Connect(function()
 		frame.Visible = true
-		restoreBtn:Destroy()
-	end)
-
-	-- Drag restore button
-	local draggingRestore, dragStartRestore, startPosRestore
-	restoreBtn.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			draggingRestore = true
-			dragStartRestore = input.Position
-			startPosRestore = restoreBtn.Position
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then draggingRestore = false end
-			end)
-		end
-	end)
-	UserInputService.InputChanged:Connect(function(input)
-		if draggingRestore and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-			local delta = input.Position - dragStartRestore
-			restoreBtn.Position = UDim2.new(startPosRestore.X.Scale, startPosRestore.X.Offset + delta.X,
-			                                startPosRestore.Y.Scale, startPosRestore.Y.Offset + delta.Y)
-		end
+		restore:Destroy()
 	end)
 end)
 
--- Drag main frame
+-- Drag support
 local dragging, dragStart, startPos
 frame.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -119,15 +128,95 @@ UserInputService.InputChanged:Connect(function(input)
 	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 		local delta = input.Position - dragStart
 		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
-		                           startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-		getgenv().KeyClickerPosition = frame.Position
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		getgenv().KeyClickerData.position = saveUDim2(frame.Position)
 	end
 end)
 
--- Touch Support
-if UserInputService.TouchEnabled then
-	keyBtn.TouchTap:Connect(function() keyBtn:Activate() end)
-	vBtn.TouchTap:Connect(function() vBtn:Activate() end)
-	toggleBtn.TouchTap:Connect(function() toggleBtn:Activate() end)
-	minimizeBtn.TouchTap:Connect(function() minimizeBtn:Activate() end)
+-- Keyboard Popup
+local selectedLabel = nil
+
+local function createKeyboardPopup()
+	local popup = Instance.new("Frame", gui)
+	popup.Size = UDim2.new(0, 320, 0, 260)
+	popup.Position = UDim2.new(0.5, -160, 0.5, -130)
+	popup.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+	popup.Active = true
+	Instance.new("UICorner", popup).CornerRadius = UDim.new(0, 10)
+
+	local function makeKey(key, x, y)
+		local btn = Instance.new("TextButton", popup)
+		btn.Size = UDim2.new(0, 40, 0, 30)
+		btn.Position = UDim2.new(0, x, 0, y)
+		btn.Text = key
+		btn.Font = Enum.Font.Gotham
+		btn.TextSize = 13
+		btn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+		btn.TextColor3 = Color3.new(1, 1, 1)
+		Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+		btn.MouseButton1Click:Connect(function()
+			local enum = Enum.KeyCode[key]
+			if enum and selectedLabel then
+				currentKeybinds[selectedLabel] = enum
+				getgenv().KeyClickerData.keybinds[selectedLabel] = enum
+				if selectedLabel == "C" then cBtn.Text = "Press: " .. enum.Name end
+				if selectedLabel == "V" then vBtn.Text = "Press: " .. enum.Name end
+				if selectedLabel == "B" then bBtn.Text = "Press: " .. enum.Name end
+				popup:Destroy()
+			end
+		end)
+	end
+
+	local keys = {}
+	for i = 65, 90 do table.insert(keys, string.char(i)) end
+	for i = 0, 9 do table.insert(keys, tostring(i)) end
+	for _, f in ipairs({"F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11"}) do
+		table.insert(keys, f) end
+	for _, s in ipairs({"-","=","[","]","\\",";",":","'",",",".","/","`"}) do
+		table.insert(keys, s) end
+
+	for i, k in ipairs(keys) do
+		local row = math.floor((i - 1) / 7)
+		local col = (i - 1) % 7
+		makeKey(k, 10 + col * 45, 40 + row * 35)
+	end
 end
+
+local changeBtn = Instance.new("TextButton", frame)
+changeBtn.Size = UDim2.new(1, -20, 0, 36)
+changeBtn.Position = UDim2.new(0, 10, 0, 170)
+changeBtn.Text = "Change Keybind"
+changeBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 100)
+changeBtn.TextColor3 = Color3.new(1, 1, 1)
+changeBtn.Font = Enum.Font.Gotham
+changeBtn.TextSize = 14
+Instance.new("UICorner", changeBtn).CornerRadius = UDim.new(0, 6)
+
+changeBtn.MouseButton1Click:Connect(function()
+	local select = Instance.new("Frame", gui)
+	select.Size = UDim2.new(0, 140, 0, 140)
+	select.Position = UDim2.new(0.5, -70, 0.5, -70)
+	select.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+	Instance.new("UICorner", select).CornerRadius = UDim.new(0, 8)
+
+	local function makeSelect(label, y)
+		local btn = Instance.new("TextButton", select)
+		btn.Size = UDim2.new(1, -20, 0, 30)
+		btn.Position = UDim2.new(0, 10, 0, y)
+		btn.Text = "Change " .. label
+		btn.BackgroundColor3 = Color3.fromRGB(90, 90, 130)
+		btn.TextColor3 = Color3.new(1,1,1)
+		btn.Font = Enum.Font.Gotham
+		btn.TextSize = 13
+		Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+		btn.MouseButton1Click:Connect(function()
+			selectedLabel = label
+			select:Destroy()
+			createKeyboardPopup()
+		end)
+	end
+
+	makeSelect("C", 10)
+	makeSelect("V", 50)
+	makeSelect("B", 90)
+end)
