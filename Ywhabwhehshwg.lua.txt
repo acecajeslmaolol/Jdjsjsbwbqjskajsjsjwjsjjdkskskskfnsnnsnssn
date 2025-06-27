@@ -6,6 +6,7 @@ local VirtualInputManager = game:GetService("VirtualInputManager")
 local function saveUDim2(udim)
 	return string.format("%s,%d,%s,%d", udim.X.Scale, udim.X.Offset, udim.Y.Scale, udim.Y.Offset)
 end
+
 local function loadUDim2(str, fallback)
 	local xS, xO, yS, yO = string.match(str or "", "([%d%.%-]+),([%d%.%-]+),([%d%.%-]+),([%d%.%-]+)")
 	if xS and xO and yS and yO then
@@ -32,14 +33,14 @@ gui.Name = "KeyClickerUI"
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 180, 0, 240)
+frame.Size = UDim2.new(0, 180, 0, 200)
 frame.Position = loadUDim2(getgenv().KeyClickerData.position, UDim2.new(0.5, -90, 0.5, -85))
 frame.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
 frame.BorderSizePixel = 0
 frame.Active = true
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
 
--- Drag frame
+-- Drag main frame
 local dragging, dragStart, startPos
 frame.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -51,6 +52,7 @@ frame.InputBegan:Connect(function(input)
 		end)
 	end
 end)
+
 UserInputService.InputChanged:Connect(function(input)
 	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
 		local delta = input.Position - dragStart
@@ -70,10 +72,10 @@ title.TextSize = 15
 title.TextColor3 = Color3.new(1, 1, 1)
 title.BackgroundTransparency = 1
 
--- Key button
+-- Button Creator
 local function makeKeyButton(label, yPos)
 	local btn = Instance.new("TextButton", frame)
-	btn.Size = UDim2.new(1, -20, 0, 34)
+	btn.Size = UDim2.new(1, -20, 0, 36)
 	btn.Position = UDim2.new(0, 10, 0, yPos)
 	btn.BackgroundColor3 = Color3.fromRGB(60, 130, 200)
 	btn.Text = "Press: " .. keybinds[label].Name
@@ -91,117 +93,9 @@ local function makeKeyButton(label, yPos)
 	return btn
 end
 
-local cBtn = makeKeyButton("C", 30)
-local vBtn = makeKeyButton("V", 70)
-local bBtn = makeKeyButton("B", 110)
-
--- Change Keybinds Button
-local changeBtn = Instance.new("TextButton", frame)
-changeBtn.Size = UDim2.new(1, -20, 0, 34)
-changeBtn.Position = UDim2.new(0, 10, 0, 150)
-changeBtn.Text = "🔁 Change Keybind"
-changeBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 100)
-changeBtn.TextColor3 = Color3.new(1, 1, 1)
-changeBtn.Font = Enum.Font.Gotham
-changeBtn.TextSize = 14
-Instance.new("UICorner", changeBtn).CornerRadius = UDim.new(0, 8)
-
-local selectedKey = nil
-
-local function createKeyboard()
-	local popup = Instance.new("Frame", gui)
-	popup.Size = UDim2.new(0, 260, 0, 210)
-	popup.Position = UDim2.new(0.5, -130, 0.5, -100)
-	popup.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-	popup.Active = true
-	Instance.new("UICorner", popup).CornerRadius = UDim.new(0, 10)
-
-	local draggingPopup = false
-	local popupStart, popupPos
-	popup.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			draggingPopup = true
-			popupStart = input.Position
-			popupPos = popup.Position
-			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then draggingPopup = false end
-			end)
-		end
-	end)
-	UserInputService.InputChanged:Connect(function(input)
-		if draggingPopup and input.UserInputType == Enum.UserInputType.MouseMovement then
-			local delta = input.Position - popupStart
-			popup.Position = UDim2.new(popupPos.X.Scale, popupPos.X.Offset + delta.X,
-				popupPos.Y.Scale, popupPos.Y.Offset + delta.Y)
-		end
-	end)
-
-	local function addButton(txt, posX, posY)
-		local btn = Instance.new("TextButton", popup)
-		btn.Size = UDim2.new(0, 40, 0, 28)
-		btn.Position = UDim2.new(0, posX, 0, posY)
-		btn.Text = txt
-		btn.Font = Enum.Font.Gotham
-		btn.TextSize = 12
-		btn.BackgroundColor3 = Color3.fromRGB(70, 70, 90)
-		btn.TextColor3 = Color3.new(1, 1, 1)
-		Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-
-		btn.MouseButton1Click:Connect(function()
-			if selectedKey and Enum.KeyCode[txt] then
-				keybinds[selectedKey] = Enum.KeyCode[txt]
-				getgenv().KeyClickerData.keybinds[selectedKey] = Enum.KeyCode[txt]
-				if selectedKey == "C" then cBtn.Text = "Press: " .. txt end
-				if selectedKey == "V" then vBtn.Text = "Press: " .. txt end
-				if selectedKey == "B" then bBtn.Text = "Press: " .. txt end
-				popup:Destroy()
-			end
-		end)
-	end
-
-	local x, y = 10, 40
-	for _, char in ipairs({"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",
-							"One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Zero",
-							"F1","F2","F3","F4","F5","F6","F7","F8","F9","F10","F11"}) do
-		if Enum.KeyCode[char] then
-			addButton(char, x, y)
-			x += 45
-			if x > 220 then
-				x = 10
-				y += 30
-			end
-		end
-	end
-end
-
-changeBtn.MouseButton1Click:Connect(function()
-	local selector = Instance.new("Frame", gui)
-	selector.Size = UDim2.new(0, 140, 0, 140)
-	selector.Position = UDim2.new(0.5, -70, 0.5, -70)
-	selector.BackgroundColor3 = Color3.fromRGB(55, 55, 75)
-	Instance.new("UICorner", selector).CornerRadius = UDim.new(0, 10)
-
-	local function makeSel(label, y)
-		local sel = Instance.new("TextButton", selector)
-		sel.Size = UDim2.new(1, -20, 0, 30)
-		sel.Position = UDim2.new(0, 10, 0, y)
-		sel.Text = "Change " .. label
-		sel.BackgroundColor3 = Color3.fromRGB(100, 100, 130)
-		sel.TextColor3 = Color3.new(1,1,1)
-		sel.Font = Enum.Font.Gotham
-		sel.TextSize = 13
-		Instance.new("UICorner", sel).CornerRadius = UDim.new(0, 6)
-		sel.MouseButton1Click:Connect(function()
-			selectedKey = label
-			selector:Destroy()
-			createKeyboard()
-		end)
-	end
-
-	makeSel("C", 10)
-	makeSel("V", 45)
-	makeSel("B", 80)
-end)
+makeKeyButton("C", 36)
+makeKeyButton("V", 78)
+makeKeyButton("B", 120)
 
 -- Minimize Button
 local minimizeBtn = Instance.new("TextButton", frame)
@@ -229,6 +123,7 @@ minimizeBtn.MouseButton1Click:Connect(function()
 	restoreBtn.Active = true
 	Instance.new("UICorner", restoreBtn).CornerRadius = UDim.new(1, 0)
 
+	-- Dragging the restore button
 	local drag, start, orig
 	restoreBtn.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
