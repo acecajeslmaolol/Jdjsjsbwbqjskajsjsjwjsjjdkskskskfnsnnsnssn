@@ -1,0 +1,184 @@
+-- Services
+local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+-- Config Save
+getgenv().KeyClicker = getgenv().KeyClicker or {
+	mainPos = "0.5,-100,0.5,-130",
+	minPos = "0.5,-25,0.5,-25"
+}
+local holdingE = false
+local moveSetMode = false
+
+-- Save/load helpers
+local function saveUDim2(udim)
+	return string.format("%s,%d,%s,%d", udim.X.Scale, udim.X.Offset, udim.Y.Scale, udim.Y.Offset)
+end
+local function loadUDim2(str)
+	local xS, xO, yS, yO = string.match(str or "", "([%d%.%-]+),([%d%.%-]+),([%d%.%-]+),([%d%.%-]+)")
+	if xS and xO and yS and yO then
+		return UDim2.new(tonumber(xS), tonumber(xO), tonumber(yS), tonumber(yO))
+	end
+	return UDim2.new(0.5, -100, 0.5, -130)
+end
+
+-- GUI
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.Name = "KeyClickerUI"
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 180, 0, 240)
+frame.Position = loadUDim2(getgenv().KeyClicker.mainPos)
+frame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+frame.BorderSizePixel = 0
+frame.Active = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+
+-- Button maker
+local function makeButton(text, yOffset, color, onClick)
+	local btn = Instance.new("TextButton", frame)
+	btn.Size = UDim2.new(1, -20, 0, 32)
+	btn.Position = UDim2.new(0, 10, 0, yOffset)
+	btn.Text = text
+	btn.Font = Enum.Font.Gotham
+	btn.TextSize = 14
+	btn.TextColor3 = Color3.new(1, 1, 1)
+	btn.BackgroundColor3 = color
+	btn.AutoButtonColor = true
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+	btn.MouseButton1Click:Connect(onClick)
+	if UserInputService.TouchEnabled then btn.TouchTap:Connect(onClick) end
+	return btn
+end
+
+-- Clear UI Buttons
+local function clearButtons()
+	for _, obj in ipairs(frame:GetChildren()) do
+		if obj:IsA("TextButton") or obj:IsA("TextLabel") then
+			obj:Destroy()
+		end
+	end
+end
+
+-- Create Normal UI
+local function buildNormal()
+	clearButtons()
+	makeButton("Press: Q", 10, Color3.fromRGB(100, 140, 255), function()
+		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+		task.wait(0.05)
+		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+	end)
+
+	local eBtn, statusLabel
+	eBtn = makeButton("Toggle Hold: E", 50, Color3.fromRGB(120, 100, 255), function()
+		holdingE = not holdingE
+		VirtualInputManager:SendKeyEvent(holdingE, Enum.KeyCode.E, false, game)
+		eBtn.Text = holdingE and "Release: E" or "Toggle Hold: E"
+		if statusLabel then
+			statusLabel.Text = holdingE and "[E] Holding Activated" or "[E] Released"
+		end
+	end)
+
+	statusLabel = Instance.new("TextLabel", frame)
+	statusLabel.Size = UDim2.new(1, -20, 0, 20)
+	statusLabel.Position = UDim2.new(0, 10, 0, 85)
+	statusLabel.Text = "[E] Released"
+	statusLabel.Font = Enum.Font.Gotham
+	statusLabel.TextSize = 13
+	statusLabel.TextColor3 = Color3.new(1, 1, 1)
+	statusLabel.BackgroundTransparency = 1
+
+	makeButton("Press: K", 110, Color3.fromRGB(140, 120, 255), function()
+		VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.K, false, game)
+		task.wait(0.05)
+		VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.K, false, game)
+	end)
+
+	makeButton("Switch to Move Set", 150, Color3.fromRGB(70, 70, 90), function()
+		moveSetMode = true
+		buildMoveSet()
+	end)
+
+	makeButton("-", 190, Color3.fromRGB(60, 60, 60), function()
+		frame.Visible = false
+		local restoreBtn = Instance.new("TextButton", gui)
+		restoreBtn.Size = UDim2.new(0, 50, 0, 50)
+		restoreBtn.Position = loadUDim2(getgenv().KeyClicker.minPos)
+		restoreBtn.Text = "+"
+		restoreBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+		restoreBtn.TextColor3 = Color3.new(1, 1, 1)
+		restoreBtn.Font = Enum.Font.GothamBold
+		restoreBtn.TextSize = 20
+		restoreBtn.Name = "RestoreKeyUI"
+		restoreBtn.Active = true
+		Instance.new("UICorner", restoreBtn).CornerRadius = UDim.new(1, 0)
+
+		local dragging, dragStart, startPos
+		restoreBtn.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = true
+				dragStart = input.Position
+				startPos = restoreBtn.Position
+				input.Changed:Connect(function()
+					if input.UserInputState == Enum.UserInputState.End then dragging = false end
+				end)
+			end
+		end)
+		UserInputService.InputChanged:Connect(function(input)
+			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+				local delta = input.Position - dragStart
+				restoreBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+					startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+				getgenv().KeyClicker.minPos = saveUDim2(restoreBtn.Position)
+			end
+		end)
+
+		restoreBtn.MouseButton1Click:Connect(function()
+			frame.Visible = true
+			restoreBtn:Destroy()
+		end)
+	end)
+end
+
+-- Create Move Set UI
+function buildMoveSet()
+	clearButtons()
+	local keys = { "T", "Q", "E", "R" }
+	for i, key in ipairs(keys) do
+		makeButton("Press: " .. key, 10 + (i - 1) * 40, Color3.fromRGB(90 + i * 20, 80, 180), function()
+			VirtualInputManager:SendKeyEvent(true, Enum.KeyCode[key], false, game)
+			task.wait(0.05)
+			VirtualInputManager:SendKeyEvent(false, Enum.KeyCode[key], false, game)
+		end)
+	end
+
+	makeButton("Revert to Normal", 10 + #keys * 40, Color3.fromRGB(80, 80, 100), function()
+		moveSetMode = false
+		buildNormal()
+	end)
+end
+
+-- Dragging the main frame
+local dragging, dragStart, startPos
+frame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then dragging = false end
+		end)
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		getgenv().KeyClicker.mainPos = saveUDim2(frame.Position)
+	end
+end)
+
+-- Build default layout
+buildNormal()
